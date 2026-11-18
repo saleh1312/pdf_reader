@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import abc
 import os
+from collections.abc import Iterator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+from manger.domain.events import Event
 
 from manger.infra.db.repo import (
     AbstractUserRepository,
@@ -38,6 +41,12 @@ class AbstractUnitOfWork(abc.ABC):
     @abc.abstractmethod
     def rollback(self) -> None:
         raise NotImplementedError
+
+    def collect_new_events(self) -> Iterator[Event]:
+        """Drain the pending events of every user the repository has seen."""
+        for user in self.users.seen:
+            while user.events:
+                yield user.events.pop(0)
 
 
 DEFAULT_ENGINE = create_engine(get_postgres_uri())
