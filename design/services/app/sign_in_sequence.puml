@@ -1,0 +1,25 @@
+﻿@startuml sign_in_sequence
+title Sign in
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+actor Client
+participant "Sign-in handler" as H
+participant "Unit of Work" as UOW
+database "Database" as DB
+
+Client -> H : sign in (username, password)
+H -> UOW : find user by username
+UOW -> DB : query
+DB --> UOW : result
+
+alt user not found or wrong password
+  H --> Client : error: invalid credentials
+else credentials match
+  H --> Client : user id
+end
+
+@enduml

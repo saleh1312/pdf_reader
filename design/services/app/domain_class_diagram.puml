@@ -1,0 +1,39 @@
+@startuml domain_class_diagram
+title Domain model
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam classFontSize 14
+hide empty members
+hide circle
+
+class User <<aggregate root>> {
+  id
+  name
+  username
+  password_hash
+  --
+  add_book(book)
+  remove_book(book_id)
+}
+
+class Book <<entity>> {
+  id
+  name
+}
+
+class StorageLocation <<value object>> {
+  provider
+  key
+}
+
+enum StorageProvider {
+  S3
+  LOCAL
+}
+
+User "1" *-right- "0..*" Book : owns
+Book "1" *-down- "1" StorageLocation : stored at
+StorageLocation -right-> StorageProvider
+
+@enduml

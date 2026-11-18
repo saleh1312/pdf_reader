@@ -1,0 +1,29 @@
+﻿@startuml sign_up_sequence
+title Sign up
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+actor Client
+participant "Sign-up handler" as H
+participant "Unit of Work" as UOW
+database "Database" as DB
+
+Client -> H : sign up (name, username, password)
+H -> UOW : find user by username
+UOW -> DB : query
+DB --> UOW : result
+
+alt username already taken
+  H --> Client : error: username taken
+else username is free
+  H -> H : hash password
+  H -> UOW : add new user
+  H -> UOW : commit
+  UOW -> DB : save
+  H --> Client : user id
+end
+
+@enduml

@@ -1,0 +1,20 @@
+@startuml architecture_onion
+title Onion architecture of manger
+
+skinparam shadowing false
+skinparam rectangleRoundCorner 40
+skinparam defaultTextAlignment center
+skinparam rectangleFontSize 14
+
+rectangle "<b>Infrastructure</b>\nPostgres mapping, repositories, unit of work, bootstrap" as infra #FDEBD0 {
+  rectangle "<b>Service layer</b>\nCommand handlers (sign up, sign in) and event handlers" as services #D6EAF8 {
+    rectangle "<b>Domain</b>\nUser, Book, StorageLocation\nCommands and events" as domain #D5F5E3
+  }
+}
+
+legend bottom
+  Each ring may depend only on the rings inside it.
+  The domain at the centre depends on nothing.
+endlegend
+
+@enduml
