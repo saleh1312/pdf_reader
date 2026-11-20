@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from manger.domain import Book, StorageLocation, StorageProvider, User
-from manger.domain.events import Logging
+from manger.domain.events import Logging, ParseBook, StoreFile
 
 
 @pytest.fixture
@@ -98,7 +98,7 @@ def test_user_starts_with_no_books():
 def test_users_do_not_share_books_list(book: Book):
     u1 = make_user("A")
     u2 = make_user("B")
-    u1.add_book(book)
+    u1.add_book(book, b"file")
     assert u2.books == []
 
 
@@ -138,15 +138,15 @@ def test_users_with_different_ids_are_not_equal():
 
 def test_add_book(book: Book):
     user = make_user("Ahmed")
-    user.add_book(book)
+    user.add_book(book, b"file")
     assert user.books == [book]
 
 
 def test_add_same_book_twice_raises(book: Book):
     user = make_user("Ahmed")
-    user.add_book(book)
+    user.add_book(book, b"file")
     with pytest.raises(ValueError, match="already belongs"):
-        user.add_book(book)
+        user.add_book(book, b"file")
     assert len(user.books) == 1
 
 
@@ -161,12 +161,21 @@ def test_new_user_has_no_events():
     assert make_user("Ahmed").events == []
 
 
-def test_add_book_records_logging_event(book: Book):
+def test_add_book_records_store_and_parse_events(book: Book):
     user = make_user("Ahmed")
-    user.add_book(book)
+    user.add_book(book, b"file")
     assert user.events == [
-        Logging(f"Book {book.id} ('Clean Architecture') added to user {user.id}")
+        StoreFile(user.id, book.id, book.location.provider.value, book.location.key, b"file"),
+        ParseBook(user.id, book.id, book.name, book.location.provider.value, book.location.key),
     ]
+
+
+def test_add_book_rejects_an_empty_file(book: Book):
+    user = make_user("Ahmed")
+    with pytest.raises(ValueError, match="empty"):
+        user.add_book(book, b"")
+    assert user.books == []
+    assert user.events == []
 
 
 def test_remove_book_records_logging_event(book: Book):
@@ -178,7 +187,7 @@ def test_remove_book_records_logging_event(book: Book):
 def test_failed_book_changes_record_no_events(book: Book):
     user = make_user("Ahmed", books=[book])
     with pytest.raises(ValueError):
-        user.add_book(book)
+        user.add_book(book, b"file")
     with pytest.raises(ValueError):
         user.remove_book(uuid4())
     assert user.events == []

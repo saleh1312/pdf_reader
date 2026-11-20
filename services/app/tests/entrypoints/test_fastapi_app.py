@@ -1,3 +1,4 @@
+import json
 import logging
 from uuid import UUID, uuid4
 
@@ -6,13 +7,31 @@ from fastapi.testclient import TestClient
 
 from manger.entrypoints.fastapi_app import create_app
 from manger.infra.db.uow import AbstractUnitOfWork
+from manger.infra.mq import PARSE_QUEUE
 from manger.infra.storage import LocalStorage
 
 
+class RecordingPublisher:
+    def __init__(self):
+        self.messages: list[tuple[str, bytes]] = []
+
+    def publish(self, queue: str, body: bytes) -> None:
+        self.messages.append((queue, body))
+
+
 @pytest.fixture
-def client(uow: AbstractUnitOfWork, tmp_path) -> TestClient:
+def publisher() -> RecordingPublisher:
+    return RecordingPublisher()
+
+
+@pytest.fixture
+def client(uow: AbstractUnitOfWork, tmp_path, publisher: RecordingPublisher) -> TestClient:
     return TestClient(
-        create_app(uow_factory=lambda: uow, storage=LocalStorage(tmp_path))
+        create_app(
+            uow_factory=lambda: uow,
+            storage=LocalStorage(tmp_path),
+            publisher=publisher,
+        )
     )
 
 
@@ -30,8 +49,15 @@ def sign_up(client: TestClient, username: str) -> str:
 
 
 def add_book(client: TestClient, user_id: str, **overrides):
-    body = {"name": "Clean Architecture", "storage_provider": "local", "storage_key": "a.pdf"}
-    return client.post(f"/users/{user_id}/books", json=body | overrides)
+    data = {"name": "Clean Architecture", "storage_provider": "local"}
+    data.update(overrides)
+    filename = data.pop("filename", "a.pdf")
+    content = data.pop("content", b"%PDF-1.4")
+    return client.post(
+        f"/users/{user_id}/books",
+        data=data,
+        files={"file": (filename, content, "application/pdf")},
+    )
 
 
 def test_sign_up_then_sign_in_returns_the_same_user(client: TestClient, username: str):
@@ -84,20 +110,32 @@ def test_blank_name_rejected_by_the_domain_is_400(client: TestClient, username: 
 
 
 def test_add_book_then_remove_it(
-    client: TestClient, username: str, caplog: pytest.LogCaptureFixture
+    client: TestClient,
+    username: str,
+    tmp_path,
+    publisher: RecordingPublisher,
+    caplog: pytest.LogCaptureFixture,
 ):
     user_id = sign_up(client, username)
 
     with caplog.at_level(logging.INFO):
-        added = add_book(client, user_id)
+        added = add_book(client, user_id, content=b"%PDF-1.4 notes")
         book_id = added.json()["book_id"]
         removed = client.delete(f"/users/{user_id}/books/{book_id}")
 
     assert added.status_code == 201
     assert removed.status_code == 204
-    # The domain events went through the message bus to the logging handler.
-    assert f"Book {book_id} ('Clean Architecture') added to user {user_id}" in caplog.text
     assert f"Book {book_id} removed from user {user_id}" in caplog.text
+    saved = list(tmp_path.rglob("a.pdf"))
+    assert len(saved) == 1
+    assert saved[0].read_bytes() == b"%PDF-1.4 notes"
+    assert len(publisher.messages) == 1
+    queue, body = publisher.messages[0]
+    assert queue == PARSE_QUEUE
+    message = json.loads(body)
+    assert message["book_id"] == book_id
+    assert message["user_id"] == user_id
+    assert message["storage_provider"] == "local"
 
 
 def test_removing_a_book_twice_is_404(client: TestClient, username: str):
@@ -124,64 +162,32 @@ def test_invalid_user_id_in_path_is_422(client: TestClient):
     assert add_book(client, "not-a-uuid").status_code == 422
 
 
-def test_upload_stores_the_file(
-    client: TestClient,
-    username: str,
-    tmp_path,
-    uow: AbstractUnitOfWork,
-    caplog: pytest.LogCaptureFixture,
-):
-    user_id = sign_up(client, username)
-    content = b"%PDF-1.4 notes"
-
-    with caplog.at_level(logging.INFO):
-        uploaded = client.post(
-            f"/users/{user_id}/books/upload",
-            files={"file": ("notes.pdf", content, "application/pdf")},
-            data={"name": "Notes", "storage_provider": "local"},
-        )
-
-    assert uploaded.status_code == 201
-    book_id = uploaded.json()["book_id"]
-    assert f"Book {book_id} ('Notes') added to user {user_id}" in caplog.text
-
-    saved = list(tmp_path.rglob("notes.pdf"))
-    assert len(saved) == 1
-    assert saved[0].read_bytes() == content
-
-    with uow:
-        book = uow.users.get(UUID(user_id)).books[0]
-        assert str(book.id) == book_id
-        assert book.name == "Notes"
-        assert book.location.key.endswith("/notes.pdf")
-
-
-def test_upload_without_a_name_uses_the_file_name(
+def test_add_book_without_a_name_uses_the_file_name(
     client: TestClient, username: str, uow: AbstractUnitOfWork
 ):
     user_id = sign_up(client, username)
 
-    uploaded = client.post(
-        f"/users/{user_id}/books/upload",
+    added = client.post(
+        f"/users/{user_id}/books",
         files={"file": ("My Chapter.docx", b"word", "application/octet-stream")},
         data={"storage_provider": "local"},
     )
 
-    assert uploaded.status_code == 201
+    assert added.status_code == 201
     with uow:
         book = uow.users.get(UUID(user_id)).books[0]
-        assert str(book.id) == uploaded.json()["book_id"]
+        assert str(book.id) == added.json()["book_id"]
         assert book.name == "My Chapter"
         assert book.location.key.endswith("/My Chapter.docx")
 
 
-def test_upload_of_unsupported_type_is_415(
+def test_add_book_of_unsupported_type_is_415(
     client: TestClient, username: str, tmp_path, uow: AbstractUnitOfWork
 ):
     user_id = sign_up(client, username)
 
     response = client.post(
-        f"/users/{user_id}/books/upload",
+        f"/users/{user_id}/books",
         files={"file": ("pic.png", b"png", "image/png")},
         data={"storage_provider": "local"},
     )
@@ -195,11 +201,11 @@ def test_upload_of_unsupported_type_is_415(
     assert list(tmp_path.rglob("*")) == []
 
 
-def test_upload_of_an_empty_file_is_400(client: TestClient, username: str):
+def test_add_book_of_an_empty_file_is_400(client: TestClient, username: str):
     user_id = sign_up(client, username)
 
     response = client.post(
-        f"/users/{user_id}/books/upload",
+        f"/users/{user_id}/books",
         files={"file": ("notes.pdf", b"", "application/pdf")},
         data={"storage_provider": "local"},
     )
@@ -208,19 +214,11 @@ def test_upload_of_an_empty_file_is_400(client: TestClient, username: str):
     assert response.json() == {"detail": "Uploaded file is empty"}
 
 
-def test_upload_for_unknown_user_is_404(client: TestClient):
+def test_add_book_to_s3_is_not_found(client: TestClient, username: str, tmp_path):
+    user_id = sign_up(client, username)
+
     response = client.post(
-        f"/users/{uuid4()}/books/upload",
-        files={"file": ("notes.pdf", b"%PDF", "application/pdf")},
-        data={"storage_provider": "local"},
-    )
-
-    assert response.status_code == 404
-
-
-def test_upload_to_s3_is_not_found(client: TestClient, tmp_path):
-    response = client.post(
-        f"/users/{uuid4()}/books/upload",
+        f"/users/{user_id}/books",
         files={"file": ("notes.pdf", b"%PDF", "application/pdf")},
         data={"storage_provider": "s3", "name": "Notes"},
     )

@@ -1,7 +1,7 @@
 """Where uploaded book files are written.
 
 Only local disk is implemented. The directory comes from `LOCAL_STORAGE_PATH`
-in `services/app/.env`. S3 has no adapter; the upload handler rejects it.
+in `services/app/.env`. S3 has no adapter; adding a book with `s3` is rejected.
 """
 
 from __future__ import annotations

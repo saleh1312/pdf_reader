@@ -13,8 +13,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from manger.bootstrap import bootstrap
-from manger.domain import StorageProvider, commands
+from manger.domain import StorageProvider, commands, events
 from manger.infra.db.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
+from manger.infra.mq import AbstractMessagePublisher, RabbitMqPublisher
 from manger.infra.storage import AbstractStorage, LocalStorage
 from manger.services.commands_handlers import (
     COMMAND_HANDLERS,
@@ -24,9 +25,8 @@ from manger.services.commands_handlers import (
     UnknownUser,
     UnsupportedFileType,
     UsernameTaken,
-    upload_book,
 )
-from manger.services.events_handlers import EVENT_HANDLERS
+from manger.services.events_handlers import EVENT_HANDLERS, publish_parse, store_file
 from manger.services.messagebus import MessageBus
 from manger.view import get_books, get_user_data
 
@@ -40,12 +40,6 @@ class SignUpRequest(BaseModel):
 class SignInRequest(BaseModel):
     username: str
     password: str
-
-
-class AddBookRequest(BaseModel):
-    name: str
-    storage_provider: StorageProvider
-    storage_key: str
 
 
 class UserIdResponse(BaseModel):
@@ -84,6 +78,7 @@ ERROR_STATUS = {
 def create_app(
     uow_factory: Callable[[], AbstractUnitOfWork] | None = None,
     storage: AbstractStorage | None = None,
+    publisher: AbstractMessagePublisher | None = None,
 ) -> FastAPI:
     if uow_factory is None:
         logging.basicConfig(level=logging.INFO)
@@ -91,16 +86,21 @@ def create_app(
         uow_factory = SqlAlchemyUnitOfWork
 
     file_storage = storage or LocalStorage()
+    message_publisher = publisher or RabbitMqPublisher()
     app = FastAPI(title="manger")
 
     def get_bus() -> MessageBus:
         # One bus and unit of work per request: both keep per-request state.
-        # Upload uses the app's storage so tests can point it at a temp directory.
-        handlers = dict(COMMAND_HANDLERS)
-        handlers[commands.UploadBook] = lambda command, uow: upload_book(
-            command, uow, file_storage
-        )
-        return MessageBus(uow_factory(), EVENT_HANDLERS, handlers)
+        # Store and parse use the app's storage and publisher so tests can
+        # point them at a temp directory and an in-memory publisher.
+        event_handlers = {
+            event_type: list(handlers) for event_type, handlers in EVENT_HANDLERS.items()
+        }
+        event_handlers[events.StoreFile] = [lambda event: store_file(event, file_storage)]
+        event_handlers[events.ParseBook] = [
+            lambda event: publish_parse(event, message_publisher)
+        ]
+        return MessageBus(uow_factory(), event_handlers, COMMAND_HANDLERS)
 
     def get_uow() -> AbstractUnitOfWork:
         return uow_factory()
@@ -120,15 +120,6 @@ def create_app(
 
     @app.post("/users/{user_id}/books", status_code=status.HTTP_201_CREATED)
     def add_book(
-        user_id: UUID, body: AddBookRequest, bus: MessageBus = Depends(get_bus)
-    ) -> BookIdResponse:
-        book_id = bus.handle(
-            commands.AddBook(user_id, body.name, body.storage_provider, body.storage_key)
-        )
-        return BookIdResponse(book_id=book_id)
-
-    @app.post("/users/{user_id}/books/upload", status_code=status.HTTP_201_CREATED)
-    def upload(
         user_id: UUID,
         file: UploadFile = File(),
         storage_provider: StorageProvider = Form(),
@@ -142,9 +133,7 @@ def create_app(
             file.file.close()
         book_name = (name or "").strip() or Path(filename).stem
         book_id = bus.handle(
-            commands.UploadBook(
-                user_id, book_name, filename, storage_provider, content
-            )
+            commands.AddBook(user_id, book_name, filename, storage_provider, content)
         )
         return BookIdResponse(book_id=book_id)
 

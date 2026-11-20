@@ -33,22 +33,33 @@ def test_failing_command_is_reraised(uow: AbstractUnitOfWork, username: str):
 
 
 def test_events_raised_by_the_domain_are_handled_after_the_command(
-    uow: AbstractUnitOfWork, username: str, caplog: pytest.LogCaptureFixture
+    uow: AbstractUnitOfWork, username: str
 ):
     def sign_up_with_a_book(command: SignUp, uow: AbstractUnitOfWork) -> UUID:
         user_id = commands_handlers.sign_up(command, uow)
         with uow:
             user = uow.users.get(user_id)
-            user.add_book(Book("Clean Architecture", StorageLocation(StorageProvider.LOCAL, "a.pdf")))
+            user.add_book(
+                Book("Clean Architecture", StorageLocation(StorageProvider.LOCAL, "a.pdf")),
+                b"%PDF",
+            )
             uow.commit()
         return user_id
 
-    bus = MessageBus(uow, EVENT_HANDLERS, {SignUp: sign_up_with_a_book})
+    handled: list[type] = []
 
-    with caplog.at_level(logging.INFO):
-        user_id = bus.handle(SignUp("Ahmed", username, "secret"))
+    def record(event: events.Event) -> None:
+        handled.append(type(event))
 
-    assert f"added to user {user_id}" in caplog.text
+    bus = MessageBus(
+        uow,
+        {events.StoreFile: [record], events.ParseBook: [record]},
+        {SignUp: sign_up_with_a_book},
+    )
+
+    bus.handle(SignUp("Ahmed", username, "secret"))
+
+    assert handled == [events.StoreFile, events.ParseBook]
     assert list(uow.collect_new_events()) == []
 
 

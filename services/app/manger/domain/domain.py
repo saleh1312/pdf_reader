@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from uuid import UUID, uuid4
 
-from .events import Event, Logging
+from .events import Event, Logging, ParseBook, StoreFile
 
 
 class StorageProvider(str, Enum):
@@ -77,12 +77,29 @@ class User:
     def __hash__(self) -> int:
         return hash(self.id)
 
-    def add_book(self, book: Book) -> None:
+    def add_book(self, book: Book, content: bytes) -> None:
         if any(b.id == book.id for b in self.books):
             raise ValueError(f"Book {book.id} already belongs to this user")
+        if not content:
+            raise ValueError("Uploaded file is empty")
         self.books.append(book)
         self.events.append(
-            Logging(message=f"Book {book.id} ({book.name!r}) added to user {self.id}")
+            StoreFile(
+                user_id=self.id,
+                book_id=book.id,
+                storage_provider=book.location.provider.value,
+                key=book.location.key,
+                content=content,
+            )
+        )
+        self.events.append(
+            ParseBook(
+                user_id=self.id,
+                book_id=book.id,
+                name=book.name,
+                storage_provider=book.location.provider.value,
+                key=book.location.key,
+            )
         )
 
     def remove_book(self, book_id: UUID) -> None:

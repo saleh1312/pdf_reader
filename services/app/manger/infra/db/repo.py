@@ -121,7 +121,10 @@ if __name__ == "__main__":
 
     with SqlAlchemyUnitOfWork() as uow:
         user = User(name="John Doe", username=f"john-{uuid4()}", password_hash="not-a-real-hash")
-        user.add_book(Book(name="Book 1", location=StorageLocation(provider=StorageProvider.LOCAL, key="book1.pdf")))
+        user.add_book(
+            Book(name="Book 1", location=StorageLocation(provider=StorageProvider.LOCAL, key="book1.pdf")),
+            b"%PDF",
+        )
         uow.users.add(user)
         uow.commit()
         print(uow.users.get_by_book_id(user.books[0].id))

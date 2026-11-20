@@ -36,7 +36,7 @@ def test_add_user_then_add_book_to_him_in_a_later_transaction():
         assert stored_user is not None
         assert stored_user.books == []
 
-        stored_user.add_book(book)
+        stored_user.add_book(book, b"%PDF")
         uow.commit()
 
     with SqlAlchemyUnitOfWork() as uow:

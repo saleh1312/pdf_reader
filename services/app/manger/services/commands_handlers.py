@@ -1,8 +1,9 @@
 """One handler per command. Handlers depend only on the abstract unit of work,
 so they run the same against Postgres or the in-memory fake.
 
-`upload_book` writes a local file through `LocalStorage`. S3 is not
-implemented and raises `StorageNotFound`.
+`add_book` records the book and raises `StoreFile` and `ParseBook`. The event
+handlers write the file and publish the parse request. S3 is not implemented
+and raises `StorageNotFound`.
 """
 
 import hashlib
@@ -15,7 +16,6 @@ from uuid import UUID, uuid4
 
 from manger.domain import Book, StorageLocation, StorageProvider, User, commands
 from manger.infra.db.uow import AbstractUnitOfWork
-from manger.infra.storage import AbstractStorage, LocalStorage
 
 
 class UsernameTaken(Exception):
@@ -90,23 +90,6 @@ def sign_in(command: commands.SignIn, uow: AbstractUnitOfWork) -> UUID:
         return user.id
 
 
-def add_book(command: commands.AddBook, uow: AbstractUnitOfWork) -> UUID:
-    """Add a book to the user's library and return the book's id."""
-    with uow:
-        user = uow.users.get(command.user_id)
-        if user is None:
-            raise UnknownUser(f"User {command.user_id} not found")
-
-        book = Book(
-            name=command.name,
-            location=StorageLocation(command.storage_provider, command.storage_key),
-        )
-        user.add_book(book)
-        book_id = book.id
-        uow.commit()
-    return book_id
-
-
 def _stored_filename(filename: str) -> str:
     """Keep only the file's own name, and only for PDF or Word."""
     name = Path(filename).name.strip()
@@ -119,40 +102,33 @@ def _stored_filename(filename: str) -> str:
     return name
 
 
-def upload_book(
-    command: commands.UploadBook,
-    uow: AbstractUnitOfWork,
-    storage: AbstractStorage | None = None,
-) -> UUID:
-    """Save an uploaded PDF or Word file and add it to the user's library.
+def add_book(command: commands.AddBook, uow: AbstractUnitOfWork) -> UUID:
+    """Record an uploaded PDF or Word file and return the book's id.
 
-    Only `local` is implemented. `s3` raises `StorageNotFound`.
+    The file is written by the `StoreFile` handler, and a parse request is
+    published by the `ParseBook` handler. Only `local` is implemented.
     """
-    if command.storage_provider is StorageProvider.S3:
-        raise StorageNotFound("S3 storage not found")
-
     filename = _stored_filename(command.filename)
     if not command.content:
         raise ValueError("Uploaded file is empty")
     if not command.name.strip():
         raise ValueError("Book name must not be empty")
+    if command.storage_provider is StorageProvider.S3:
+        raise StorageNotFound("S3 storage not found")
 
-    storage = storage or LocalStorage()
     book_id = uuid4()
     key = f"{command.user_id}/{book_id}/{filename}"
+    book = Book(
+        name=command.name,
+        location=StorageLocation(command.storage_provider, key),
+        id=book_id,
+    )
 
     with uow:
         user = uow.users.get(command.user_id)
         if user is None:
             raise UnknownUser(f"User {command.user_id} not found")
-
-        storage.save(key, command.content)
-        book = Book(
-            name=command.name,
-            location=StorageLocation(command.storage_provider, key),
-            id=book_id,
-        )
-        user.add_book(book)
+        user.add_book(book, command.content)
         uow.commit()
     return book_id
 
@@ -174,5 +150,4 @@ COMMAND_HANDLERS: dict[type[commands.Command], Callable[[Any, AbstractUnitOfWork
     commands.SignIn: sign_in,
     commands.AddBook: add_book,
     commands.RemoveBook: remove_book,
-    commands.UploadBook: upload_book,
 }

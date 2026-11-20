@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from manger.domain import StorageLocation, StorageProvider, commands
-from manger.domain.commands import AddBook, RemoveBook, SignIn, SignUp, UploadBook
+from manger.domain import StorageProvider, commands
+from manger.domain.commands import AddBook, RemoveBook, SignIn, SignUp
 from manger.infra.db.uow import AbstractUnitOfWork
 from manger.infra.storage import LocalStorage
 from manger.services import commands_handlers as handlers
@@ -77,7 +77,8 @@ def test_sign_in_rejects_unknown_username(uow: AbstractUnitOfWork, username: str
 
 def add_book(uow: AbstractUnitOfWork, user_id) -> UUID:
     return handlers.add_book(
-        AddBook(user_id, "Clean Architecture", StorageProvider.LOCAL, "a.pdf"), uow
+        AddBook(user_id, "Clean Architecture", "a.pdf", StorageProvider.LOCAL, b"%PDF"),
+        uow,
     )
 
 
@@ -89,7 +90,8 @@ def test_add_book_stores_it_on_the_user(uow: AbstractUnitOfWork, username: str):
     with uow:
         user = uow.users.get(user_id)
         assert [b.id for b in user.books] == [book_id]
-        assert user.books[0].location == StorageLocation(StorageProvider.LOCAL, "a.pdf")
+        assert user.books[0].location.provider is StorageProvider.LOCAL
+        assert user.books[0].location.key.endswith("/a.pdf")
 
 
 def test_add_book_for_unknown_user_raises(uow: AbstractUnitOfWork):
@@ -123,22 +125,20 @@ def test_commands_do_not_show_password_in_repr():
     assert "secret" not in repr(SignUp("Ahmed", "ahmed", "secret"))
     assert "secret" not in repr(SignIn("ahmed", "secret"))
     assert "pdf-bytes" not in repr(
-        UploadBook(uuid4(), "Notes", "notes.pdf", StorageProvider.LOCAL, b"pdf-bytes")
+        AddBook(uuid4(), "Notes", "notes.pdf", StorageProvider.LOCAL, b"pdf-bytes")
     )
 
 
 @pytest.mark.parametrize("filename", ["notes.pdf", "notes.PDF", "chapter.docx", "draft.doc"])
-def test_upload_book_stores_pdf_and_word_files(
-    uow: AbstractUnitOfWork, username: str, tmp_path, filename: str
+def test_add_book_records_pdf_and_word_files(
+    uow: AbstractUnitOfWork, username: str, filename: str
 ):
     user_id = handlers.sign_up(SignUp("Ahmed", username, "secret"), uow)
-    storage = LocalStorage(tmp_path)
     content = b"%PDF-1.4 notes" if filename.lower().endswith(".pdf") else b"word-bytes"
 
-    book_id = handlers.upload_book(
-        UploadBook(user_id, "Notes", filename, StorageProvider.LOCAL, content),
+    book_id = handlers.add_book(
+        AddBook(user_id, "Notes", filename, StorageProvider.LOCAL, content),
         uow,
-        storage,
     )
 
     with uow:
@@ -146,87 +146,68 @@ def test_upload_book_stores_pdf_and_word_files(
         assert book.id == book_id
         assert book.name == "Notes"
         assert book.location.provider is StorageProvider.LOCAL
-        key = book.location.key
-    assert key.endswith(f"/{Path(filename).name}")
-    assert (tmp_path / key).read_bytes() == content
+        assert book.location.key.endswith(f"/{Path(filename).name}")
 
 
-def test_upload_book_rejects_other_file_types(
-    uow: AbstractUnitOfWork, username: str, tmp_path
-):
+def test_add_book_rejects_other_file_types(uow: AbstractUnitOfWork, username: str):
     user_id = handlers.sign_up(SignUp("Ahmed", username, "secret"), uow)
 
     with pytest.raises(handlers.UnsupportedFileType):
-        handlers.upload_book(
-            UploadBook(user_id, "Pic", "pic.png", StorageProvider.LOCAL, b"png"),
+        handlers.add_book(
+            AddBook(user_id, "Pic", "pic.png", StorageProvider.LOCAL, b"png"),
             uow,
-            LocalStorage(tmp_path),
         )
 
     with uow:
         assert uow.users.get(user_id).books == []
-    assert list(tmp_path.rglob("*")) == []
 
 
-def test_upload_book_rejects_an_empty_file(
-    uow: AbstractUnitOfWork, username: str, tmp_path
-):
+def test_add_book_rejects_an_empty_file(uow: AbstractUnitOfWork, username: str):
     user_id = handlers.sign_up(SignUp("Ahmed", username, "secret"), uow)
 
     with pytest.raises(ValueError, match="empty"):
-        handlers.upload_book(
-            UploadBook(user_id, "Notes", "notes.pdf", StorageProvider.LOCAL, b""),
+        handlers.add_book(
+            AddBook(user_id, "Notes", "notes.pdf", StorageProvider.LOCAL, b""),
             uow,
-            LocalStorage(tmp_path),
         )
 
     with uow:
         assert uow.users.get(user_id).books == []
 
 
-def test_upload_book_for_unknown_user_writes_nothing(uow: AbstractUnitOfWork, tmp_path):
+def test_add_book_for_unknown_user_raises_before_saving(uow: AbstractUnitOfWork):
     with pytest.raises(handlers.UnknownUser):
-        handlers.upload_book(
-            UploadBook(uuid4(), "Notes", "notes.pdf", StorageProvider.LOCAL, b"%PDF"),
+        handlers.add_book(
+            AddBook(uuid4(), "Notes", "notes.pdf", StorageProvider.LOCAL, b"%PDF"),
             uow,
-            LocalStorage(tmp_path),
         )
 
-    assert list(tmp_path.rglob("*")) == []
 
-
-def test_upload_book_keeps_only_the_file_name(
-    uow: AbstractUnitOfWork, username: str, tmp_path
-):
+def test_add_book_keeps_only_the_file_name(uow: AbstractUnitOfWork, username: str):
     user_id = handlers.sign_up(SignUp("Ahmed", username, "secret"), uow)
-    storage = LocalStorage(tmp_path)
 
-    handlers.upload_book(
-        UploadBook(user_id, "Notes", "../../secret.pdf", StorageProvider.LOCAL, b"%PDF"),
+    handlers.add_book(
+        AddBook(user_id, "Notes", "../../secret.pdf", StorageProvider.LOCAL, b"%PDF"),
         uow,
-        storage,
     )
 
-    saved = list(tmp_path.rglob("secret.pdf"))
-    assert len(saved) == 1
-    assert saved[0].is_relative_to(tmp_path)
-    assert ".." not in str(saved[0].relative_to(tmp_path))
-    assert saved[0].read_bytes() == b"%PDF"
+    with uow:
+        key = uow.users.get(user_id).books[0].location.key
+    assert key.endswith("/secret.pdf")
+    assert ".." not in key
 
 
-def test_upload_book_s3_is_not_found(uow: AbstractUnitOfWork, username: str, tmp_path):
+def test_add_book_s3_is_not_found(uow: AbstractUnitOfWork, username: str):
     user_id = handlers.sign_up(SignUp("Ahmed", username, "secret"), uow)
 
     with pytest.raises(handlers.StorageNotFound, match="not found"):
-        handlers.upload_book(
-            UploadBook(user_id, "Notes", "notes.pdf", StorageProvider.S3, b"%PDF"),
+        handlers.add_book(
+            AddBook(user_id, "Notes", "notes.pdf", StorageProvider.S3, b"%PDF"),
             uow,
-            LocalStorage(tmp_path),
         )
 
     with uow:
         assert uow.users.get(user_id).books == []
-    assert list(tmp_path.rglob("*")) == []
 
 
 def test_local_storage_reads_the_directory_from_dotenv(tmp_path):

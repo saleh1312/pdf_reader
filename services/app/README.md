@@ -93,19 +93,24 @@ Interactive docs, where you can try every endpoint, are at
 | ----------------------------------------- | --------------------------------------------- | ----------------------- |
 | `POST /sign_up`                           | `name`, `username`, `password`                | `201 {"user_id": ...}`  |
 | `POST /sign_in`                           | `username`, `password`                        | `200 {"user_id": ...}`  |
-| `POST /users/{user_id}/books`             | `name`, `storage_provider`, `storage_key`     | `201 {"book_id": ...}`  |
-| `POST /users/{user_id}/books/upload`      | multipart `file`, `storage_provider`, optional `name` | `201 {"book_id": ...}` |
+| `POST /users/{user_id}/books`             | multipart `file`, `storage_provider`, optional `name` | `201 {"book_id": ...}` |
 | `GET /users/{user_id}`                    | none                                          | `200` user and `books`  |
 | `DELETE /users/{user_id}/books/{book_id}` | none                                          | `204`                   |
 
 `storage_provider` is `"s3"` or `"local"`.
 
-`POST /users/{user_id}/books/upload` accepts a PDF or Word file (`.pdf`, `.doc`,
-`.docx`) and a `storage_provider` of `"local"` or `"s3"`. `"local"` writes the
-file under the directory in `LOCAL_STORAGE_PATH` in `services/app/.env`
-(relative paths start from `services/app`). The book's `storage_key` is the
-path relative to that directory. `"s3"` is not implemented and returns 404.
-If `name` is omitted, the book is named from the file name.
+`POST /users/{user_id}/books` accepts a PDF or Word file (`.pdf`, `.doc`,
+`.docx`) and a `storage_provider` of `"local"` or `"s3"`. Adding the book
+raises two events: one stores the file, and one asks for it to be parsed.
+`"local"` writes the file under the directory in `LOCAL_STORAGE_PATH` in
+`services/app/.env` (relative paths start from `services/app`). The book's
+`storage_key` is the path relative to that directory. `"s3"` is not
+implemented and returns 404. If `name` is omitted, the book is named from
+the file name.
+
+The parse event is published to the RabbitMQ queue `parse_book`. Start the
+broker and the worker from [services/parsing](../parsing/README.md). The
+worker renders the book to page images and sends them to PaddleOCR.
 
 `GET /users/{user_id}` returns `user_id`, `name`, `username`, and `books`.
 Each book has `book_id`, `name`, `storage_provider`, and `storage_key`.
@@ -135,16 +140,12 @@ curl -X POST http://127.0.0.1:8000/sign_in \
   -d '{"username": "ahmed", "password": "secret"}'
 
 curl -X POST http://127.0.0.1:8000/users/<user_id>/books \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Clean Architecture", "storage_provider": "local", "storage_key": "books/clean-arch.pdf"}'
-# {"book_id": "d8cea35d-..."}
-
-curl -X DELETE http://127.0.0.1:8000/users/<user_id>/books/<book_id>
-
-curl -X POST http://127.0.0.1:8000/users/<user_id>/books/upload \
   -F "storage_provider=local" \
   -F "name=Clean Architecture" \
   -F "file=@clean-arch.pdf"
+# {"book_id": "d8cea35d-..."}
+
+curl -X DELETE http://127.0.0.1:8000/users/<user_id>/books/<book_id>
 
 curl http://127.0.0.1:8000/users/<user_id>
 ```
@@ -155,16 +156,14 @@ The same in PowerShell:
 $base = "http://127.0.0.1:8000"
 $user = Invoke-RestMethod -Method Post "$base/sign_up" -ContentType application/json `
   -Body '{"name": "Ahmed", "username": "ahmed", "password": "secret"}'
-$book = Invoke-RestMethod -Method Post "$base/users/$($user.user_id)/books" -ContentType application/json `
-  -Body '{"name": "Clean Architecture", "storage_provider": "local", "storage_key": "a.pdf"}'
-Invoke-WebRequest -Method Delete "$base/users/$($user.user_id)/books/$($book.book_id)"
-Invoke-RestMethod -Method Post "$base/users/$($user.user_id)/books/upload" `
+$book = Invoke-RestMethod -Method Post "$base/users/$($user.user_id)/books" `
   -Form @{ storage_provider = "local"; name = "Clean Architecture"; file = Get-Item .\clean-arch.pdf }
+Invoke-WebRequest -Method Delete "$base/users/$($user.user_id)/books/$($book.book_id)"
 Invoke-RestMethod "$base/users/$($user.user_id)"
 ```
 
-Adding and removing books logs a line from the domain's events, for example
-`Book <id> ('Clean Architecture') added to user <id>`.
+Removing a book logs a line from the domain's events, for example
+`Book <id> removed from user <id>`.
 
 The API has no authentication yet: the book endpoints trust the `user_id` in
 the URL. Don't expose it outside local development.

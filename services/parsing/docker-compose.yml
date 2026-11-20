@@ -1,0 +1,58 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: pdf_reader_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pdf_reader}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-pdf_reader}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: pdf_reader_vllm
+    restart: unless-stopped
+    ipc: host
+    gpus: all
+    ports:
+      - "${VLLM_PORT:-8092}:8092"
+    volumes:
+      - vllm-huggingface:/root/.cache/huggingface
+    command:
+      - PaddlePaddle/PaddleOCR-VL-1.6
+      - --served-model-name
+      - PaddleOCR-VL-1.6-0.9B
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8092"
+      - --trust-remote-code
+      - --no-enable-prefix-caching
+      - --max-num-batched-tokens
+      - "16384"
+      - --mm-processor-cache-gb
+      - "0"
+      - --gpu-memory-utilization
+      - "0.6"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 600s
+
+volumes:
+  vllm-huggingface:
