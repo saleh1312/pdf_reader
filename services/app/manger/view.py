@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import text
 
 from manger.domain import StorageProvider
-from manger.infra.db.uow import AbstractUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 
 
 def get_user_data(user_id: UUID, uow: AbstractUnitOfWork) -> dict | None:

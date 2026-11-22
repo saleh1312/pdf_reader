@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any
 
 from manger.domain import commands, events
-from manger.infra.db.uow import AbstractUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 
 logger = logging.getLogger(__name__)
 

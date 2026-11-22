@@ -42,6 +42,7 @@ class Book:
     name: str
     location: StorageLocation
     id: UUID = field(default_factory=uuid4)
+    is_parsed: bool = False
 
     def __post_init__(self) -> None:
         if not self.name.strip():

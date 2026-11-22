@@ -6,6 +6,7 @@ at application startup, before any session is used.
 """
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Engine,
     Enum,
@@ -15,6 +16,8 @@ from sqlalchemy import (
     Table,
     Uuid,
     event,
+    false,
+    text,
 )
 from sqlalchemy.orm import composite, registry, relationship
 
@@ -54,6 +57,7 @@ books = Table(
         nullable=False,
     ),
     Column("storage_key", String(1024), nullable=False),
+    Column("is_parsed", Boolean, nullable=False, server_default=false(), default=False),
 )
 
 _mapped = False
@@ -96,6 +100,14 @@ def _init_user_events(user: User, _context) -> None:
 def init_db(engine: Engine) -> None:
     """Create any missing tables and types; existing ones are left untouched."""
     metadata.create_all(engine, checkfirst=True)
+    # create_all does not add columns to a table that already exists.
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE books "
+                "ADD COLUMN IF NOT EXISTS is_parsed BOOLEAN NOT NULL DEFAULT false"
+            )
+        )
 
 
 def drop_db(engine: Engine) -> None:

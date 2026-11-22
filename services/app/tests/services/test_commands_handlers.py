@@ -5,7 +5,7 @@ import pytest
 
 from manger.domain import StorageProvider, commands
 from manger.domain.commands import AddBook, RemoveBook, SignIn, SignUp
-from manger.infra.db.uow import AbstractUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 from manger.infra.storage import LocalStorage
 from manger.services import commands_handlers as handlers
 

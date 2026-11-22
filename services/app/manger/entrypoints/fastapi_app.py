@@ -14,7 +14,8 @@ from pydantic import BaseModel
 
 from manger.bootstrap import bootstrap
 from manger.domain import StorageProvider, commands, events
-from manger.infra.db.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
+from manger.infra.db.uow import SqlAlchemyUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 from manger.infra.mq import AbstractMessagePublisher, RabbitMqPublisher
 from manger.infra.storage import AbstractStorage, LocalStorage
 from manger.services.commands_handlers import (

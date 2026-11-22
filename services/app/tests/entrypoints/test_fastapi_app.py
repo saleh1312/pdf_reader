@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from manger.entrypoints.fastapi_app import create_app
-from manger.infra.db.uow import AbstractUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 from manger.infra.mq import PARSE_QUEUE
 from manger.infra.storage import LocalStorage
 

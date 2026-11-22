@@ -2,12 +2,8 @@ import pytest
 
 from manger.bootstrap import bootstrap
 from manger.infra.db.mapper import clear_db
-from manger.infra.db.uow import (
-    DEFAULT_ENGINE,
-    AbstractUnitOfWork,
-    FakeUnitOfWork,
-    SqlAlchemyUnitOfWork,
-)
+from manger.infra.db.uow import DEFAULT_ENGINE, FakeUnitOfWork, SqlAlchemyUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

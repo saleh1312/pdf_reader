@@ -53,6 +53,37 @@ def handle(message: dict) -> None:
     logger.info("parsing %s", images_dir)
     parsed_dir = parse_images(images_dir, book_path, book_name)
     logger.info("parsed book saved in %s", parsed_dir)
+    mark_book_parsed(message)
+
+
+def mark_book_parsed(message: dict, *, connect=None) -> None:
+    """Set books.is_parsed in the app database after the JSON files are written."""
+    book_id = str(message["book_id"])
+    user_id = str(message["user_id"])
+    opener = connect or _connect_app_db
+    with opener() as connection:
+        result = connection.execute(
+            "UPDATE books SET is_parsed = true WHERE id = %s AND user_id = %s",
+            (book_id, user_id),
+        )
+        updated = result.rowcount
+    if updated != 1:
+        raise RuntimeError(f"book {book_id} was not marked parsed")
+    logger.info("marked book %s parsed", book_id)
+
+
+def _connect_app_db():
+    import psycopg
+
+    return psycopg.connect(_app_database_dsn())
+
+
+def _app_database_dsn() -> str:
+    raw = _setting(
+        "APP_DATABASE_URL",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/pdf_reader",
+    )
+    return raw.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
 def _book_path(storage_key: str) -> Path:

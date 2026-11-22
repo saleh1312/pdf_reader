@@ -15,7 +15,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from manger.domain import Book, StorageLocation, StorageProvider, User, commands
-from manger.infra.db.uow import AbstractUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 
 
 class UsernameTaken(Exception):

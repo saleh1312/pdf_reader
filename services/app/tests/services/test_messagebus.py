@@ -5,7 +5,8 @@ import pytest
 
 from manger.domain import Book, StorageLocation, StorageProvider, events
 from manger.domain.commands import SignIn, SignUp
-from manger.infra.db.uow import AbstractUnitOfWork, FakeUnitOfWork
+from manger.infra.db.uow import FakeUnitOfWork
+from manger.services.unit_of_work import AbstractUnitOfWork
 from manger.services import commands_handlers
 from manger.services.commands_handlers import COMMAND_HANDLERS, InvalidCredentials
 from manger.services.events_handlers import EVENT_HANDLERS
