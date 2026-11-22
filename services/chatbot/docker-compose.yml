@@ -1,6 +1,6 @@
 services:
   chatbot-postgres:
-    image: postgres:16-alpine
+    image: postgres:16.11-alpine
     container_name: pdf_reader_chatbot_postgres
     restart: unless-stopped
     environment:
@@ -20,3 +20,4 @@ services:
 volumes:
   chatbot_postgres_data:
     name: chatbot_chatbot_postgres_data
+    external: true

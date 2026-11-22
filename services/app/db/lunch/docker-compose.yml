@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.11-alpine
     container_name: pdf_reader_postgres
     restart: unless-stopped
     environment:
@@ -20,3 +20,4 @@ services:
 volumes:
   postgres_data:
     name: db_postgres_data
+    external: true
