@@ -7,19 +7,21 @@ hide footbox
 autonumber
 
 actor Client
-participant "Sign-in handler" as H
-participant "Unit of Work" as UOW
-database "Database" as DB
+participant Application
+participant "Sign in service" as Service
+database DB
 
-Client -> H : sign in (username, password)
-H -> UOW : find user by username
-UOW -> DB : query
-DB --> UOW : result
+Client -> Application : sign in (username, password)
+Application -> Service : SignIn
+Service -> DB : find user by username
+DB --> Service : user or none
 
 alt user not found or wrong password
-  H --> Client : error: invalid credentials
+  Service --> Application : invalid credentials
+  Application --> Client : error
 else credentials match
-  H --> Client : user id
+  Service --> Application : user id
+  Application --> Client : user id
 end
 
 @enduml

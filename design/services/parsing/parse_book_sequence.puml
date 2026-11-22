@@ -1,0 +1,27 @@
+@startuml parse_book_sequence
+title Parse book
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+queue "RabbitMQ" as Queue
+participant "Parsing worker" as Worker
+participant "vLLM" as VLLM
+database "App DB" as DB
+
+Queue -> Worker : parse_book (user, book, storage key)
+Worker -> Worker : render each page to an image
+
+alt file is not a local book
+  Worker --> Queue : reject message
+else pages rendered
+  Worker -> VLLM : page images
+  VLLM --> Worker : text, tables, charts, locations
+  Worker -> Worker : write one JSON file per page
+  Worker -> DB : set is_parsed = true
+  Worker --> Queue : acknowledge
+end
+
+@enduml

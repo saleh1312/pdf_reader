@@ -1,0 +1,30 @@
+@startuml create_session_sequence
+title Create session
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+actor Client
+participant Application
+participant "Chatbot service" as Service
+database "App DB" as AppDB
+database "Chatbot DB" as ChatDB
+
+Client -> Application : create session (user id, book id)
+Application -> Service : CreateSession
+Service -> AppDB : load book path and is_parsed
+AppDB --> Service : book
+
+alt book missing, not parsed, or not local
+  Service --> Application : error
+  Application --> Client : error
+else book is parsed
+  Service -> Service : read paragraph blocks from parsed JSON
+  Service -> ChatDB : store session and system message
+  Service --> Application : session id
+  Application --> Client : success, session id
+end
+
+@enduml

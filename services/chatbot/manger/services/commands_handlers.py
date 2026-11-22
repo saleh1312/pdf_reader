@@ -3,6 +3,7 @@ The book's path is read from the app database through the view.
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,14 @@ class UnsupportedStorage(Exception):
 
 class UnknownSession(Exception):
     pass
+
+
+# Sent with the book text. It is not stored, so older chats follow it too.
+REPLY_PROMPT = (
+    "Answer in plain text only, in the same language as the question. "
+    "Keep the reply short or medium, a few simple sentences. "
+    "Do not use markdown, bullets, headings, stars, numbering, or symbols.\n\n"
+)
 
 
 def _user_db() -> AbstractUserUnitOfWork:
@@ -101,7 +110,7 @@ def infer(
             content=text,
             content_type=ContentType.TEXT,
         )
-        reply = model.send([*session.messages, user_message])
+        reply = model.send(_with_reply_prompt([*session.messages, user_message]))
         session.add_message(user_message)
         session.add_message(
             Message(
@@ -113,6 +122,16 @@ def infer(
         )
         uow.commit()
     return reply
+
+
+def _with_reply_prompt(messages: list[Message]) -> list[Message]:
+    """Ask for a plain, short or medium reply without changing stored history."""
+    for index, message in enumerate(messages):
+        if message.turn is Turn.SYSTEM:
+            prompted = list(messages)
+            prompted[index] = replace(message, content=REPLY_PROMPT + message.content)
+            return prompted
+    return messages
 
 
 def _provider() -> AiProvider:

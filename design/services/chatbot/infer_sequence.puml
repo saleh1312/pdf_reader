@@ -1,0 +1,31 @@
+@startuml infer_sequence
+title Infer
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+hide footbox
+autonumber
+
+actor Client
+participant Application
+participant "Chatbot service" as Service
+database "Chatbot DB" as DB
+participant "AI provider" as AI
+
+Client -> Application : infer (session id, message)
+Application -> Service : Infer
+Service -> DB : load session history
+DB --> Service : messages
+
+alt session not found or blank message
+  Service --> Application : error
+  Application --> Client : error
+else session exists
+  Service -> AI : history plus the new message
+  AI --> Service : reply
+  Service -> DB : store user message and reply
+  Service --> Application : reply
+  Application --> Client : reply
+end
+
+@enduml

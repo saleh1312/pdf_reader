@@ -1,0 +1,20 @@
+@startuml architecture
+title Parsing worker
+
+skinparam shadowing false
+skinparam rectangleRoundCorner 20
+skinparam defaultTextAlignment center
+skinparam rectangleFontSize 14
+
+rectangle "RabbitMQ\nparse_book" as queue #FDEBD0
+rectangle "Worker\nto_images then parse_images" as worker #D6EAF8
+rectangle "vLLM\nPaddleOCR model" as vllm #F5EEF8
+rectangle "Parsed JSON\nnext to the book" as files #FDEBD0
+database "App DB\nis_parsed" as db #FDEBD0
+
+queue -down-> worker
+worker -down-> vllm
+vllm -down-> files
+files -down-> db
+
+@enduml

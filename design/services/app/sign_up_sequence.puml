@@ -7,23 +7,23 @@ hide footbox
 autonumber
 
 actor Client
-participant "Sign-up handler" as H
-participant "Unit of Work" as UOW
-database "Database" as DB
+participant Application
+participant "Sign up service" as Service
+database DB
 
-Client -> H : sign up (name, username, password)
-H -> UOW : find user by username
-UOW -> DB : query
-DB --> UOW : result
+Client -> Application : sign up (name, username, password)
+Application -> Service : SignUp
+Service -> DB : find user by username
+DB --> Service : result
 
 alt username already taken
-  H --> Client : error: username taken
+  Service --> Application : username taken
+  Application --> Client : error
 else username is free
-  H -> H : hash password
-  H -> UOW : add new user
-  H -> UOW : commit
-  UOW -> DB : save
-  H --> Client : user id
+  Service -> Service : hash password
+  Service -> DB : save new user
+  Service --> Application : user id
+  Application --> Client : user id
 end
 
 @enduml

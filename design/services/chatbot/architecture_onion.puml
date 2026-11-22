@@ -1,0 +1,20 @@
+@startuml architecture_onion
+title Onion architecture of chatbot service
+
+skinparam shadowing false
+skinparam rectangleRoundCorner 40
+skinparam defaultTextAlignment center
+skinparam rectangleFontSize 14
+
+rectangle "<b>Infrastructure</b>\nChat Postgres, app Postgres session,\nparsed-book reader, OpenAI adapter" as infra #FDEBD0 {
+  rectangle "<b>Service layer</b>\nCreate session and infer" as services #D6EAF8 {
+    rectangle "<b>Domain</b>\nSession, Message\nCommands and events" as domain #D5F5E3
+  }
+}
+
+legend bottom
+  Each ring may depend only on the rings inside it.
+  The domain at the centre depends on nothing.
+endlegend
+
+@enduml

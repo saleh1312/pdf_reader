@@ -1,5 +1,5 @@
 @startuml architecture_onion
-title Onion architecture of manger
+title Onion architecture of app service
 
 skinparam shadowing false
 skinparam rectangleRoundCorner 40

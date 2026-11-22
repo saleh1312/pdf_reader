@@ -47,7 +47,8 @@ def test_create_session_then_infer_returns_the_model_reply():
     assert answer.status_code == 200
     assert answer.json() == {"message": "Chapter one."}
     assert [item.turn for item in provider.sent[0]] == [Turn.SYSTEM, Turn.USER]
-    assert provider.sent[0][0].content == "Page 1\nHello"
+    assert provider.sent[0][0].content.endswith("Page 1\nHello")
+    assert "plain text" in provider.sent[0][0].content
     assert provider.sent[0][1].content == "What is this?"
     stored = uow.sessions.get(UUID(session_id))
     assert [item.turn for item in stored.messages] == [Turn.SYSTEM, Turn.USER, Turn.AI]

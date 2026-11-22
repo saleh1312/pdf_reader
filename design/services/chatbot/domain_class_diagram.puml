@@ -1,0 +1,39 @@
+@startuml domain_class_diagram
+title Domain model
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam classFontSize 14
+hide empty members
+hide circle
+
+class Session <<aggregate root>> {
+  id
+  user_id
+  book_id
+  --
+  add_message(message)
+  add_book_context(book_id, content)
+}
+
+class Message <<entity>> {
+  id
+  date
+  content
+}
+
+enum Turn {
+  SYSTEM
+  USER
+  AI
+}
+
+enum ContentType {
+  TEXT
+}
+
+Session "1" *-right- "0..*" Message : owns
+Message -down-> Turn
+Message -down-> ContentType
+
+@enduml
