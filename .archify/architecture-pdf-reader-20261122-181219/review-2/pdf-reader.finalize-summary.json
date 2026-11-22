@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\candidate.json",
+    "sha256": "5a068846248ed344cd1ec9095c59e3aa4677057c2b7c1347130e79ede6c21c43",
+    "bytes": 7208
+  },
+  "artifact": {
+    "path": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.html",
+    "sha256": "5007157caed805df7a3db8f24eafbf67833140d1ab46230b32262baf0aa9f673",
+    "bytes": 859689
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\review-2\\pdf-reader.finalize.json",
+    "summaryReceipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\review-2\\pdf-reader.finalize-summary.json",
+    "browserCheckReceipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\review-2\\pdf-reader.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-22T16:13:23.835Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3032,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 2,
+      "routesOverSuggestedBends": 2
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "app-sql",
+            "from": "app",
+            "to": "appdb",
+            "label": "SQL",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "right": {
+            "id": "chat-sql",
+            "from": "chatbot",
+            "to": "chatdb",
+            "label": "SQL",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "point": [
+            421,
+            416
+          ]
+        },
+        {
+          "left": {
+            "id": "app-sql",
+            "from": "app",
+            "to": "appdb",
+            "label": "SQL",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "right": {
+            "id": "load-pages",
+            "from": "chatbot",
+            "to": "files",
+            "label": "paragraphs",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            480,
+            260
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "app-sql",
+            "from": "app",
+            "to": "appdb",
+            "label": "SQL",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "bends": 4,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "mark-parsed",
+            "from": "parsing",
+            "to": "appdb",
+            "label": "is_parsed",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "bends": 3,
+          "stretch": 1.071
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "app → appdb crosses chatbot → chatdb: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "app → appdb crosses chatbot → files: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "app → appdb needs 4 bends: move node app or appdb so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "parsing → appdb needs 3 bends: move node parsing or appdb so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

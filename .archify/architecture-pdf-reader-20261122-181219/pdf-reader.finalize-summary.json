@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\candidate.json",
+    "sha256": "67c34dfb3f6dd81cfbeb96fac132b3ed20ddf47de2744969355698b21b9106aa",
+    "bytes": 7447
+  },
+  "artifact": {
+    "path": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.html",
+    "sha256": "8238dca2c0d33ed9eb7955ce724e545af2084a4b9dcdfd51ff93de4584b3fe2d",
+    "bytes": 859941
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.finalize.json",
+    "summaryReceipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.finalize-summary.json",
+    "browserCheckReceipt": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-22T16:13:23.835Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3244,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 6,
+      "routesOverSuggestedBends": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "save-file",
+            "from": "app",
+            "to": "files",
+            "label": "save",
+            "collectionIndex": 4,
+            "artifactIndex": 5
+          },
+          "right": {
+            "id": "enqueue",
+            "from": "app",
+            "to": "rabbit",
+            "label": "enqueue",
+            "collectionIndex": 5,
+            "artifactIndex": 6
+          },
+          "point": [
+            332,
+            378
+          ],
+          "sharedNode": "app"
+        },
+        {
+          "left": {
+            "id": "save-file",
+            "from": "app",
+            "to": "files",
+            "label": "save",
+            "collectionIndex": 4,
+            "artifactIndex": 5
+          },
+          "right": {
+            "id": "read-book",
+            "from": "chatbot",
+            "to": "appdb",
+            "label": "if parsed",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "point": [
+            514,
+            378.38461538461536
+          ]
+        },
+        {
+          "left": {
+            "id": "enqueue",
+            "from": "app",
+            "to": "rabbit",
+            "label": "enqueue",
+            "collectionIndex": 5,
+            "artifactIndex": 6
+          },
+          "right": {
+            "id": "read-book",
+            "from": "chatbot",
+            "to": "appdb",
+            "label": "if parsed",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "point": [
+            514,
+            424
+          ]
+        },
+        {
+          "left": {
+            "id": "enqueue",
+            "from": "app",
+            "to": "rabbit",
+            "label": "enqueue",
+            "collectionIndex": 5,
+            "artifactIndex": 6
+          },
+          "right": {
+            "id": "load-pages",
+            "from": "chatbot",
+            "to": "files",
+            "label": "paragraphs",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            533,
+            424
+          ]
+        },
+        {
+          "left": {
+            "id": "mark-parsed",
+            "from": "parsing",
+            "to": "appdb",
+            "label": "is_parsed",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "right": {
+            "id": "write-json",
+            "from": "parsing",
+            "to": "files",
+            "label": "page JSON",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "point": [
+            526,
+            665
+          ],
+          "sharedNode": "parsing"
+        },
+        {
+          "left": {
+            "id": "read-book",
+            "from": "chatbot",
+            "to": "appdb",
+            "label": "if parsed",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "right": {
+            "id": "load-pages",
+            "from": "chatbot",
+            "to": "files",
+            "label": "paragraphs",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            634,
+            132
+          ],
+          "sharedNode": "chatbot"
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "read-book",
+            "from": "chatbot",
+            "to": "appdb",
+            "label": "if parsed",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "bends": 5,
+          "stretch": 1
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "app → files and app → rabbit cross next to app: move node files or rabbit so the two reach app from different sides (for example one level with it, one directly above or below it).",
+      "app → files crosses chatbot → appdb: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "app → rabbit crosses chatbot → appdb: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "app → rabbit crosses chatbot → files: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "parsing → appdb and parsing → files cross next to parsing: move node appdb or files so the two reach parsing from different sides (for example one level with it, one directly above or below it).",
+      "chatbot → appdb and chatbot → files cross next to chatbot: move node appdb or files so the two reach chatbot from different sides (for example one level with it, one directly above or below it).",
+      "chatbot → appdb needs 5 bends: move node chatbot or appdb so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

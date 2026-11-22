@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c63b3ef1-79e5-4943-abfa-01281ae37aeb",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\candidate.json",
+  "output": "C:\\Users\\saleh\\Documents\\GitHub\\pdf_reader\\.archify\\architecture-pdf-reader-20261122-181219\\pdf-reader.html",
+  "specification": {
+    "sha256": "5a068846248ed344cd1ec9095c59e3aa4677057c2b7c1347130e79ede6c21c43",
+    "bytes": 7208
+  },
+  "artifact": {
+    "sha256": "5007157caed805df7a3db8f24eafbf67833140d1ab46230b32262baf0aa9f673",
+    "bytes": 859689
+  }
+}

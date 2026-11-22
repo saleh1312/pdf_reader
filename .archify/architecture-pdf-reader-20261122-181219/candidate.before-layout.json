@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PDF reader services",
+    "locale": "en",
+    "output": ".archify/architecture-pdf-reader-20261122-181219/pdf-reader.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/saleh1312/pdf_reader.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "cd8f6800931748e05bb0b712506241ab5a14f628"
+    }
+  },
+  "components": [
+    {
+      "id": "reader",
+      "type": "external",
+      "label": "Reader",
+      "sublabel": "Browser",
+      "pos": [40, 42],
+      "size": [124, 60],
+      "sources": [{ "path": "services/web/src/App.jsx", "line": 7, "end_line": 14 }]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Web",
+      "sublabel": "React :8080",
+      "pos": [236, 40],
+      "size": [164, 64],
+      "sources": [
+        { "path": "services/web/Dockerfile", "line": 13, "end_line": 15 },
+        { "path": "services/web/src/api.js", "line": 9, "end_line": 10 },
+        { "path": "services/docker-compose.yml", "line": 68, "end_line": 75 }
+      ]
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "App API",
+      "sublabel": "FastAPI :8000",
+      "pos": [236, 240],
+      "size": [164, 68],
+      "sources": [
+        { "path": "services/app/manger/entrypoints/fastapi_app.py", "line": 148, "end_line": 175 },
+        { "path": "services/app/Dockerfile", "line": 15, "end_line": 17 },
+        { "path": "services/docker-compose.yml", "line": 9, "end_line": 25 }
+      ]
+    },
+    {
+      "id": "chatbot",
+      "type": "backend",
+      "label": "Chatbot",
+      "sublabel": "FastAPI :8001",
+      "pos": [560, 40],
+      "size": [176, 68],
+      "sources": [
+        { "path": "services/chatbot/manger/entrypoints/fastapi_app.py", "line": 133, "end_line": 163 },
+        { "path": "services/chatbot/Dockerfile", "line": 15, "end_line": 17 },
+        { "path": "services/chatbot/manger/services/commands_handlers.py", "line": 49, "end_line": 87 }
+      ]
+    },
+    {
+      "id": "ai",
+      "type": "external",
+      "label": "AI provider",
+      "sublabel": "OpenAI-compatible",
+      "pos": [900, 42],
+      "size": [190, 64],
+      "sources": [
+        { "path": "services/chatbot/manger/infra/ai_providers/openai.py", "line": 21, "end_line": 49 },
+        { "path": "services/chatbot/manger/services/commands_handlers.py", "line": 101, "end_line": 113 }
+      ]
+    },
+    {
+      "id": "chatdb",
+      "type": "database",
+      "label": "Chat Postgres",
+      "sublabel": "sessions :5433",
+      "pos": [563, 240],
+      "size": [170, 64],
+      "sources": [
+        { "path": "services/chatbot/docker-compose.yml", "line": 2, "end_line": 16 },
+        { "path": "services/chatbot/manger/infra/db/session/uow.py", "line": 20, "end_line": 27 },
+        { "path": "services/chatbot/.env", "line": 26, "end_line": 26 }
+      ]
+    },
+    {
+      "id": "appdb",
+      "type": "database",
+      "label": "App Postgres",
+      "sublabel": "users, books :5432",
+      "pos": [236, 448],
+      "size": [164, 64],
+      "sources": [
+        { "path": "services/app/db/lunch/docker-compose.yml", "line": 2, "end_line": 16 },
+        { "path": "services/app/manger/infra/db/uow.py", "line": 17, "end_line": 24 },
+        { "path": "services/app/db/lunch/.env", "line": 4, "end_line": 4 }
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "Book files",
+      "sublabel": "shared volume",
+      "pos": [448, 448],
+      "size": [156, 64],
+      "sources": [
+        { "path": "services/app/manger/services/events_handlers.py", "line": 19, "end_line": 23 },
+        { "path": "services/docker-compose.yml", "line": 24, "end_line": 25 },
+        { "path": "services/parsing/worker.py", "line": 86, "end_line": 93 }
+      ]
+    },
+    {
+      "id": "rabbit",
+      "type": "messagebus",
+      "label": "RabbitMQ",
+      "sublabel": "queue parse_book",
+      "pos": [660, 448],
+      "size": [156, 64],
+      "sources": [
+        { "path": "services/parsing/docker-compose.yml", "line": 2, "end_line": 16 },
+        { "path": "services/app/manger/services/events_handlers.py", "line": 26, "end_line": 39 },
+        { "path": "services/parsing/worker.py", "line": 16, "end_line": 31 }
+      ]
+    },
+    {
+      "id": "parsing",
+      "type": "backend",
+      "label": "Parsing",
+      "sublabel": "worker",
+      "pos": [660, 638],
+      "size": [156, 68],
+      "sources": [
+        { "path": "services/parsing/worker.py", "line": 34, "end_line": 72 },
+        { "path": "services/docker-compose.yml", "line": 27, "end_line": 46 }
+      ]
+    },
+    {
+      "id": "vllm",
+      "type": "backend",
+      "label": "vLLM",
+      "sublabel": "PaddleOCR-VL",
+      "pos": [650, 828],
+      "size": [176, 64],
+      "sources": [
+        { "path": "services/parsing/docker-compose.yml", "line": 18, "end_line": 45 },
+        { "path": "services/parsing/parse_images.py", "line": 81, "end_line": 88 },
+        { "path": "services/parsing/.env", "line": 5, "end_line": 5 }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Compose project pdf-reader",
+      "pad": 18,
+      "wraps": ["web", "app", "chatbot", "chatdb", "appdb", "files", "rabbit", "parsing", "vllm"]
+    }
+  ],
+  "connections": [
+    { "id": "open-app", "from": "reader", "to": "web", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "accounts-books", "from": "web", "to": "app", "label": "HTTP :8000", "variant": "emphasis" },
+    { "id": "chat-http", "from": "web", "to": "chatbot", "label": "HTTP :8001", "variant": "emphasis" },
+    { "id": "app-sql", "from": "app", "to": "appdb", "label": "SQL" },
+    { "id": "save-file", "from": "app", "to": "files", "label": "save", "fromSide": "bottom", "toSide": "top" },
+    { "id": "enqueue", "from": "app", "to": "rabbit", "label": "enqueue", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "consume", "from": "rabbit", "to": "parsing", "label": "consume", "variant": "dashed" },
+    { "id": "ocr", "from": "parsing", "to": "vllm", "label": "OCR" },
+    { "id": "mark-parsed", "from": "parsing", "to": "appdb", "label": "is_parsed", "fromSide": "left", "toSide": "bottom" },
+    { "id": "write-json", "from": "parsing", "to": "files", "label": "page JSON", "fromSide": "left", "toSide": "bottom" },
+    { "id": "chat-sql", "from": "chatbot", "to": "chatdb", "label": "SQL" },
+    { "id": "complete", "from": "chatbot", "to": "ai", "label": "chat" },
+    { "id": "read-book", "from": "chatbot", "to": "appdb", "label": "if parsed", "fromSide": "bottom", "toSide": "right" },
+    { "id": "load-pages", "from": "chatbot", "to": "files", "label": "paragraphs", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Reader",
+      "items": [
+        "Sign in, upload, and open chat in the React app",
+        "The chat page fetches the PDF from the app API"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Parse",
+      "items": [
+        "Upload stores the file and enqueues parse_book",
+        "The worker OCRs page images, writes JSON, then sets is_parsed"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Chat",
+      "items": [
+        "A session starts only when the book is parsed and local",
+        "Replies come from the configured OpenAI-compatible API"
+      ]
+    }
+  ]
+}
