@@ -74,6 +74,7 @@ def test_add_book_context_stores_a_system_message_and_raises_an_event():
 
     session.add_book_context(book_id, "Page 1\nHello")
 
+    assert session.book_id == book_id
     assert session.events == [SessionCreated(session.id, user_id, book_id)]
     assert session.messages[0].turn is Turn.SYSTEM
     assert session.messages[0].content == "Page 1\nHello"

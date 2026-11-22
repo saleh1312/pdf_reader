@@ -9,7 +9,8 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, Form, Request, Response, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from manger.bootstrap import bootstrap
@@ -29,7 +30,7 @@ from manger.services.commands_handlers import (
 )
 from manger.services.events_handlers import EVENT_HANDLERS, publish_parse, store_file
 from manger.services.messagebus import MessageBus
-from manger.view import get_books, get_user_data
+from manger.view import get_book_status, get_books, get_user_data
 
 
 class SignUpRequest(BaseModel):
@@ -49,6 +50,20 @@ class UserIdResponse(BaseModel):
 
 class BookIdResponse(BaseModel):
     book_id: UUID
+
+
+class BookStatusResponse(BaseModel):
+    book_id: UUID
+    name: str
+    is_parsed: bool
+    viewable: bool
+
+
+_MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 class BookResponse(BaseModel):
@@ -89,6 +104,12 @@ def create_app(
     file_storage = storage or LocalStorage()
     message_publisher = publisher or RabbitMqPublisher()
     app = FastAPI(title="manger")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://127.0.0.1:8080", "http://localhost:8080"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     def get_bus() -> MessageBus:
         # One bus and unit of work per request: both keep per-request state.
@@ -150,6 +171,41 @@ def create_app(
             name=user["name"],
             username=user["username"],
             books=[BookResponse(**book) for book in get_books(user_id, uow)],
+        )
+
+    @app.get("/users/{user_id}/books/{book_id}")
+    def book_status(
+        user_id: UUID, book_id: UUID, uow: AbstractUnitOfWork = Depends(get_uow)
+    ) -> BookStatusResponse:
+        user_exists, book = get_book_status(user_id, book_id, uow)
+        if not user_exists:
+            raise UnknownUser(f"User {user_id} not found")
+        if book is None:
+            raise UnknownBook(f"Book {book_id} not found for this user")
+        return BookStatusResponse(**book)
+
+    @app.get("/users/{user_id}/books/{book_id}/file")
+    def book_file(
+        user_id: UUID, book_id: UUID, uow: AbstractUnitOfWork = Depends(get_uow)
+    ) -> FileResponse:
+        user_exists, book = get_book_status(user_id, book_id, uow)
+        if not user_exists:
+            raise UnknownUser(f"User {user_id} not found")
+        if book is None:
+            raise UnknownBook(f"Book {book_id} not found for this user")
+        if book["storage_provider"] != StorageProvider.LOCAL.value or not isinstance(
+            file_storage, LocalStorage
+        ):
+            raise StorageNotFound("Book file is not on local storage")
+        try:
+            path = file_storage.resolve(book["storage_key"])
+        except FileNotFoundError as exc:
+            raise StorageNotFound("Book file not found") from exc
+        return FileResponse(
+            path,
+            media_type=_MEDIA_TYPES.get(path.suffix.lower(), "application/octet-stream"),
+            filename=path.name,
+            content_disposition_type="inline",
         )
 
     @app.delete("/users/{user_id}/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)

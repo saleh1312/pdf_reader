@@ -52,6 +52,7 @@ class Session:
     user_id: UUID
     messages: list[Message] = field(default_factory=list)
     id: UUID = field(default_factory=uuid4)
+    book_id: UUID | None = None
     events: list[Event] = field(default_factory=list, init=False, repr=False)
 
     def __eq__(self, other: object) -> bool:
@@ -69,6 +70,7 @@ class Session:
 
     def add_book_context(self, book_id: UUID, content: str) -> None:
         """Store the book's paragraphs as the session's system message."""
+        self.book_id = book_id
         self.add_message(
             Message(
                 date=datetime.now(timezone.utc),

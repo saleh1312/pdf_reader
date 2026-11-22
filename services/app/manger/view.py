@@ -4,6 +4,7 @@ Queries go through the unit of work's session as SQL, not through the
 repositories, so reading a user does not load the domain model.
 """
 
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import text
@@ -43,6 +44,27 @@ def get_books(user_id: UUID, uow: AbstractUnitOfWork) -> list[dict]:
             {"user_id": user_id},
         ).mappings().all()
         return [_as_dict(row) for row in rows]
+
+
+def get_book_status(
+    user_id: UUID, book_id: UUID, uow: AbstractUnitOfWork
+) -> tuple[bool, dict | None]:
+    """Return whether the user exists, and the book when they own it."""
+    with uow:
+        user = uow.users.get(user_id)
+        if user is None:
+            return False, None
+        for book in user.books:
+            if book.id == book_id:
+                return True, {
+                    "book_id": book.id,
+                    "name": book.name,
+                    "is_parsed": bool(book.is_parsed),
+                    "viewable": Path(book.location.key).suffix.lower() == ".pdf",
+                    "storage_provider": book.location.provider.value,
+                    "storage_key": book.location.key,
+                }
+        return True, None
 
 
 def _as_dict(row) -> dict:

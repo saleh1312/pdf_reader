@@ -64,6 +64,13 @@ class LocalStorage(AbstractStorage):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
 
+    def resolve(self, key: str) -> Path:
+        """Absolute path of a stored file, or FileNotFoundError when it is missing."""
+        path = self._path_for(key)
+        if not path.is_file():
+            raise FileNotFoundError(key)
+        return path
+
     def _path_for(self, key: str) -> Path:
         if not key.strip():
             raise ValueError("Storage key must not be empty")

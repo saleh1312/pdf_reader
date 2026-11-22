@@ -7,7 +7,10 @@ import logging
 from collections.abc import Callable
 from uuid import UUID
 
+from datetime import datetime
+
 from fastapi import Depends, FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -28,6 +31,7 @@ from manger.services.events_handlers import EVENT_HANDLERS
 from manger.services.messagebus import MessageBus
 from manger.services.session_uow import AbstractSessionUnitOfWork
 from manger.services.user_uow import AbstractUserUnitOfWork
+from manger.sessions_view import get_session, list_sessions
 
 
 class CreateSessionRequest(BaseModel):
@@ -47,6 +51,24 @@ class InferRequest(BaseModel):
 
 class InferResponse(BaseModel):
     message: str
+
+
+class SessionSummary(BaseModel):
+    session_id: UUID
+    book_id: UUID | None
+    preview: str
+
+
+class HistoryMessage(BaseModel):
+    turn: str
+    content: str
+    date: datetime
+
+
+class SessionHistory(BaseModel):
+    session_id: UUID
+    book_id: UUID | None
+    messages: list[HistoryMessage]
 
 
 ERROR_STATUS = {
@@ -71,6 +93,12 @@ def create_app(
         uow_factory = SessionDbUnitOfWork
 
     app = FastAPI(title="chatbot")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://127.0.0.1:8080", "http://localhost:8080"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     def get_bus() -> MessageBus:
         command_handlers = dict(COMMAND_HANDLERS)
@@ -92,6 +120,26 @@ def create_app(
     ) -> SessionResponse:
         result = bus.handle(commands.CreateSession(body.user_id, body.book_id))
         return SessionResponse(status=result["status"], session_id=result["session_id"])
+
+    def get_uow() -> AbstractSessionUnitOfWork:
+        return uow_factory()
+
+    @app.get("/users/{user_id}/sessions")
+    def sessions(
+        user_id: UUID, uow: AbstractSessionUnitOfWork = Depends(get_uow)
+    ) -> list[SessionSummary]:
+        return [SessionSummary(**row) for row in list_sessions(user_id, uow)]
+
+    @app.get("/users/{user_id}/sessions/{session_id}")
+    def session_history(
+        user_id: UUID,
+        session_id: UUID,
+        uow: AbstractSessionUnitOfWork = Depends(get_uow),
+    ) -> SessionHistory:
+        session = get_session(user_id, session_id, uow)
+        if session is None:
+            raise UnknownSession(f"Session {session_id} not found")
+        return SessionHistory(**session)
 
     @app.post("/infer")
     def ask(body: InferRequest, bus: MessageBus = Depends(get_bus)) -> InferResponse:

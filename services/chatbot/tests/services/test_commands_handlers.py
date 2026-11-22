@@ -50,6 +50,7 @@ def test_create_session_stores_the_paragraphs_and_returns_success(tmp_path: Path
     assert uow.committed is True
     stored = uow.sessions.get(result["session_id"])
     assert stored.user_id == user_id
+    assert stored.book_id == book_id
     assert stored.messages[0].turn is Turn.SYSTEM
     assert stored.messages[0].content_type is ContentType.TEXT
     assert stored.messages[0].content == "Page 1\nChapter one"
@@ -133,6 +134,7 @@ def test_create_session_on_the_databases_returns_success(tmp_path: Path):
 
         with SessionDbUnitOfWork() as uow:
             stored = uow.sessions.get(session_id)
+            assert stored.book_id == book_id
             assert stored.messages[0].content == "Page 1\nFrom the database"
             assert stored.messages[0].turn is Turn.SYSTEM
     finally:

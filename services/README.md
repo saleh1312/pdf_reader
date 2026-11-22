@@ -13,6 +13,7 @@ Start the databases and RabbitMQ before the processes that use them.
 | PaddleOCR vLLM | `http://localhost:8092/v1` |
 | Chatbot Postgres | `localhost:5433`, database `chatbot` |
 | Chatbot API | `http://127.0.0.1:8001` |
+| Frontend | `http://127.0.0.1:8080` |
 
 ## App
 
@@ -79,6 +80,8 @@ Docs: `http://127.0.0.1:8001/docs`
 | Method and path | Body | Success |
 | --- | --- | --- |
 | `POST /sessions` | `user_id`, `book_id` | `201 {"status": "success", "session_id": ...}` |
+| `GET /users/{user_id}/sessions` | none | `200` list of `{session_id, book_id, preview}` |
+| `GET /users/{user_id}/sessions/{session_id}` | none | `200` `{session_id, book_id, messages}` |
 | `POST /infer` | `session_id`, `msg` | `200 {"message": ...}` |
 
 `POST /sessions` reads the parsed pages of a book whose `is_parsed` flag is true and stores them as the session's system message. `POST /infer` sends that history plus `msg` to the model, stores the user message and the reply, and returns the reply.
@@ -88,6 +91,19 @@ Stop the chatbot database:
 ```powershell
 docker compose down
 ```
+
+## Frontend
+
+Directory: `services/web`
+
+React app, served by Vite. The app API and the chatbot API must already be running.
+
+```powershell
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:8080`. Sign up or log in at `/`. `/books` uploads a book and checks once a second whether it is parsed. When it is, **New session** opens `/chat`. That page lists this user's sessions on the left and shows the book's PDF on the right. Choosing a chat loads its history, and the box at the bottom continues that chat.
 
 ## Tests
 

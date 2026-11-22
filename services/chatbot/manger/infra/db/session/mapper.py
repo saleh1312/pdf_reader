@@ -11,6 +11,7 @@ from sqlalchemy import (
     Text,
     Uuid,
     event,
+    text,
 )
 from sqlalchemy.orm import registry, relationship
 
@@ -24,6 +25,7 @@ sessions = Table(
     metadata,
     Column("id", Uuid, primary_key=True),
     Column("user_id", Uuid, nullable=False, index=True),
+    Column("book_id", Uuid, nullable=True),
 )
 
 messages = Table(
@@ -85,3 +87,8 @@ def _init_session_events(session: Session, _context) -> None:
 def init_db(engine: Engine) -> None:
     """Create the chat tables in the chatbot database."""
     metadata.create_all(engine, checkfirst=True)
+    # create_all does not add columns to a table that already exists.
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS book_id UUID")
+        )

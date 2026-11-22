@@ -214,6 +214,51 @@ def test_add_book_of_an_empty_file_is_400(client: TestClient, username: str):
     assert response.json() == {"detail": "Uploaded file is empty"}
 
 
+def test_book_status_reports_whether_the_book_is_parsed(
+    client: TestClient, username: str, uow: AbstractUnitOfWork
+):
+    user_id = sign_up(client, username)
+    added = add_book(client, user_id)
+    book_id = added.json()["book_id"]
+
+    waiting = client.get(f"/users/{user_id}/books/{book_id}")
+
+    assert waiting.status_code == 200
+    assert waiting.json() == {
+        "book_id": book_id,
+        "name": "Clean Architecture",
+        "is_parsed": False,
+        "viewable": True,
+    }
+
+    with uow:
+        uow.users.get(UUID(user_id)).books[0].is_parsed = True
+
+    ready = client.get(f"/users/{user_id}/books/{book_id}")
+
+    assert ready.json()["is_parsed"] is True
+
+
+def test_book_file_is_served_inline_for_the_viewer(client: TestClient, username: str):
+    user_id = sign_up(client, username)
+    book_id = add_book(client, user_id, content=b"%PDF-1.4 notes").json()["book_id"]
+
+    response = client.get(f"/users/{user_id}/books/{book_id}/file")
+
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 notes"
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].startswith("inline;")
+
+
+def test_book_status_for_an_unknown_book_is_404(client: TestClient, username: str):
+    user_id = sign_up(client, username)
+
+    response = client.get(f"/users/{user_id}/books/{uuid4()}")
+
+    assert response.status_code == 404
+
+
 def test_add_book_to_s3_is_not_found(client: TestClient, username: str, tmp_path):
     user_id = sign_up(client, username)
 
