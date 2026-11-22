@@ -3,6 +3,8 @@
 PDF reader stores a book, reads its pages, and lets you chat about it.
 The demo is the web app: sign up, upload a PDF, wait until it is parsed, then open a chat next to the PDF.
 
+<video src="https://github.com/user-attachments/assets/f8e214d0-c06a-420b-b1a7-e0ed0c2ca554" controls></video>
+
 ## 0. Architecture and technologies
 
 The app service and the chatbot use onion architecture and domain-driven design. The domain sits in the centre and depends on nothing. The service layer handles commands and events. Infrastructure (databases, files, queues, and the chat provider) sits outside and depends inward. FastAPI is only the entrance: it turns an HTTP call into a command.
