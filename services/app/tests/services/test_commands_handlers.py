@@ -210,7 +210,18 @@ def test_add_book_s3_is_not_found(uow: AbstractUnitOfWork, username: str):
         assert uow.users.get(user_id).books == []
 
 
-def test_local_storage_reads_the_directory_from_dotenv(tmp_path):
+def test_local_storage_prefers_an_absolute_path_from_the_environment(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text("LOCAL_STORAGE_PATH=books\n", encoding="utf-8")
+    monkeypatch.setenv("LOCAL_STORAGE_PATH", str(tmp_path / "from-env"))
+
+    storage = LocalStorage(env_file=env_file)
+
+    assert storage.root == tmp_path / "from-env"
+
+
+def test_local_storage_reads_the_directory_from_dotenv(tmp_path, monkeypatch):
+    monkeypatch.delenv("LOCAL_STORAGE_PATH", raising=False)
     env_file = tmp_path / ".env"
     env_file.write_text("LOCAL_STORAGE_PATH=books\n", encoding="utf-8")
 

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    parameters = pika.URLParameters(_setting("RABBITMQ_URL", "amqp://pdf_reader:pdf_reader@localhost:5672/"))
+    parameters = pika.URLParameters(_required("RABBITMQ_URL"))
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.queue_declare(queue=QUEUE, durable=True)
@@ -79,10 +79,7 @@ def _connect_app_db():
 
 
 def _app_database_dsn() -> str:
-    raw = _setting(
-        "APP_DATABASE_URL",
-        "postgresql+psycopg://postgres:postgres@localhost:5432/pdf_reader",
-    )
+    raw = _required("APP_DATABASE_URL")
     return raw.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
@@ -102,6 +99,13 @@ def _storage_root() -> Path:
     if not path.is_absolute():
         path = _ENV_FILE.parent / path
     return path.resolve()
+
+
+def _required(key: str) -> str:
+    value = _setting(key)
+    if not value:
+        raise RuntimeError(f"{key} is missing from the environment or {_ENV_FILE}")
+    return value
 
 
 def _setting(key: str, default: str = "") -> str:

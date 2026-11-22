@@ -14,21 +14,18 @@ from dotenv import dotenv_values
 
 # services/app/.env when this file lives in manger/infra/.
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-_DEFAULT_URL = "amqp://pdf_reader:pdf_reader@localhost:5672/"
 
 PARSE_QUEUE = "parse_book"
 
 
 def rabbitmq_url() -> str:
-    """`RABBITMQ_URL` from the environment, then from `.env`, then the local default."""
+    """`RABBITMQ_URL` from the environment, then from `services/app/.env`."""
     configured = os.environ.get("RABBITMQ_URL", "").strip()
-    if configured:
-        return configured
-    if _ENV_FILE.is_file():
-        from_file = (dotenv_values(_ENV_FILE).get("RABBITMQ_URL") or "").strip()
-        if from_file:
-            return from_file
-    return _DEFAULT_URL
+    if not configured and _ENV_FILE.is_file():
+        configured = (dotenv_values(_ENV_FILE).get("RABBITMQ_URL") or "").strip()
+    if not configured:
+        raise RuntimeError(f"RABBITMQ_URL is missing from the environment or {_ENV_FILE}")
+    return configured
 
 
 class AbstractMessagePublisher(abc.ABC):

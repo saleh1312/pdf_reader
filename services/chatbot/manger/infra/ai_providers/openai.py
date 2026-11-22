@@ -27,7 +27,9 @@ class OpenAiProvider(AiProvider):
 
     def __init__(self, client=None, model: str | None = None, base_url: str | None = None):
         self._client = client
-        self.model = model or _setting("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = model or _setting("OPENAI_MODEL")
+        if not self.model:
+            raise RuntimeError("OPENAI_MODEL is missing from services/chatbot/.env")
         self.base_url = _api_root(base_url if base_url is not None else _setting("OPENAI_BASE_URL"))
 
     def send(self, messages: list[Message]) -> str:

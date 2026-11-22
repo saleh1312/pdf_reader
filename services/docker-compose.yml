@@ -1,0 +1,75 @@
+name: pdf-reader
+
+include:
+  - path: app/db/lunch/docker-compose.yml
+  - path: parsing/docker-compose.yml
+  - path: chatbot/docker-compose.yml
+
+services:
+  app:
+    build: ./app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/storage:/storage
+
+  parsing:
+    build: ./parsing
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      vllm:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      APP_DATABASE_URL: ${APP_DATABASE_URL}
+      VLLM_OPENAI_ENDPOINT: ${VLLM_OPENAI_ENDPOINT}
+      VLLM_MODEL_NAME: ${VLLM_MODEL_NAME}
+      VLLM_API_KEY: ${VLLM_API_KEY}
+      OCR_CONCURRENCY: ${OCR_CONCURRENCY}
+      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH}
+    volumes:
+      - ./app/storage:/storage
+
+  chatbot:
+    build: ./chatbot
+    restart: unless-stopped
+    env_file:
+      - chatbot/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chatbot-postgres:
+        condition: service_healthy
+    environment:
+      APP_DATABASE_URL: ${APP_DATABASE_URL}
+      CHATBOT_DATABASE_URL: ${CHATBOT_DATABASE_URL}
+      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./app/storage:/storage
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    depends_on:
+      - app
+      - chatbot
+    ports:
+      - "8080:8080"

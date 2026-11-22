@@ -23,7 +23,7 @@ def app_database_url() -> str:
         from_file = (dotenv_values(_ENV_FILE).get("APP_DATABASE_URL") or "").strip()
         if from_file:
             return from_file
-    return "postgresql+psycopg://postgres:postgres@localhost:5432/pdf_reader"
+    raise RuntimeError(f"APP_DATABASE_URL is missing from the environment or {_ENV_FILE}")
 
 
 APP_ENGINE = create_engine(app_database_url())

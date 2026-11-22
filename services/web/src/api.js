@@ -1,5 +1,13 @@
-export const APP_API = "http://127.0.0.1:8000";
-export const CHAT_API = "http://127.0.0.1:8001";
+function required(name) {
+  const value = import.meta.env[name];
+  if (!value) {
+    throw new Error(`${name} is missing from services/web/.env`);
+  }
+  return value;
+}
+
+export const APP_API = required("VITE_APP_API");
+export const CHAT_API = required("VITE_CHAT_API");
 
 export function currentUser() {
   const raw = localStorage.getItem("reader");

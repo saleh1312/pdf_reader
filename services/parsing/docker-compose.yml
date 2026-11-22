@@ -4,11 +4,11 @@ services:
     container_name: pdf_reader_rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pdf_reader}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-pdf_reader}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -21,18 +21,20 @@ services:
     restart: unless-stopped
     ipc: host
     gpus: all
+    environment:
+      VLLM_PORT: ${VLLM_PORT}
     ports:
-      - "${VLLM_PORT:-8092}:8092"
+      - "${VLLM_PORT}:${VLLM_PORT}"
     volumes:
       - vllm-huggingface:/root/.cache/huggingface
     command:
-      - PaddlePaddle/PaddleOCR-VL-1.6
+      - ${VLLM_MODEL_REPO}
       - --served-model-name
-      - PaddleOCR-VL-1.6-0.9B
+      - ${VLLM_MODEL_NAME}
       - --host
       - 0.0.0.0
       - --port
-      - "8092"
+      - ${VLLM_PORT}
       - --trust-remote-code
       - --no-enable-prefix-caching
       - --max-num-batched-tokens
@@ -47,7 +49,7 @@ services:
           "CMD",
           "python3",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/health')",
+          "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ['VLLM_PORT'])",
         ]
       interval: 30s
       timeout: 10s
@@ -56,3 +58,4 @@ services:
 
 volumes:
   vllm-huggingface:
+    name: parsing_vllm-huggingface

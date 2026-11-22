@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
+from dotenv import dotenv_values
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -9,12 +11,17 @@ from manger.infra.db.repo import FakeUserRepository, SqlAlchemyUserRepository
 from manger.services.unit_of_work import AbstractUnitOfWork
 
 
+_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+
+
 def get_postgres_uri() -> str:
-    # Defaults match db/lunch/docker-compose.yml.
-    return os.environ.get(
-        "DATABASE_URL",
-        "postgresql+psycopg://postgres:postgres@localhost:5432/pdf_reader",
-    )
+    """`DATABASE_URL` from the environment, then from `services/app/.env`."""
+    configured = os.environ.get("DATABASE_URL", "").strip()
+    if not configured and _ENV_FILE.is_file():
+        configured = (dotenv_values(_ENV_FILE).get("DATABASE_URL") or "").strip()
+    if not configured:
+        raise RuntimeError(f"DATABASE_URL is missing from the environment or {_ENV_FILE}")
+    return configured
 
 
 DEFAULT_ENGINE = create_engine(get_postgres_uri())

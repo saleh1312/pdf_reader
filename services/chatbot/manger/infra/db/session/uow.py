@@ -24,7 +24,7 @@ def chatbot_database_url() -> str:
         from_file = (dotenv_values(_ENV_FILE).get("CHATBOT_DATABASE_URL") or "").strip()
         if from_file:
             return from_file
-    return "postgresql+psycopg://postgres:postgres@localhost:5433/chatbot"
+    raise RuntimeError(f"CHATBOT_DATABASE_URL is missing from the environment or {_ENV_FILE}")
 
 
 CHATBOT_ENGINE = create_engine(chatbot_database_url())

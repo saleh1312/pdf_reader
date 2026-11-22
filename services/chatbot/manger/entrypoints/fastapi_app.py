@@ -4,11 +4,14 @@ Run with: uv run uvicorn manger.entrypoints.fastapi_app:create_app --factory --p
 """
 
 import logging
+import os
 from collections.abc import Callable
+from pathlib import Path
 from uuid import UUID
 
 from datetime import datetime
 
+from dotenv import dotenv_values
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -71,6 +74,19 @@ class SessionHistory(BaseModel):
     messages: list[HistoryMessage]
 
 
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
+def _cors_origins() -> list[str]:
+    raw = os.environ.get("CORS_ORIGINS", "").strip()
+    if not raw and _ENV_FILE.is_file():
+        raw = (dotenv_values(_ENV_FILE).get("CORS_ORIGINS") or "").strip()
+    origins = [item.strip() for item in raw.split(",") if item.strip()]
+    if not origins:
+        raise RuntimeError(f"CORS_ORIGINS is missing from the environment or {_ENV_FILE}")
+    return origins
+
+
 ERROR_STATUS = {
     ValueError: status.HTTP_400_BAD_REQUEST,
     UnknownBook: status.HTTP_404_NOT_FOUND,
@@ -95,7 +111,7 @@ def create_app(
     app = FastAPI(title="chatbot")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://127.0.0.1:8080", "http://localhost:8080"],
+        allow_origins=_cors_origins(),
         allow_methods=["*"],
         allow_headers=["*"],
     )

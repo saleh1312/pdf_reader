@@ -1,14 +1,14 @@
 services:
-  postgres:
+  chatbot-postgres:
     image: postgres:16-alpine
     container_name: pdf_reader_chatbot_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-chatbot}
+      POSTGRES_USER: ${CHATBOT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CHATBOT_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CHATBOT_POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${CHATBOT_POSTGRES_PORT}:5432"
     volumes:
       - chatbot_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,3 +19,4 @@ services:
 
 volumes:
   chatbot_postgres_data:
+    name: chatbot_chatbot_postgres_data

@@ -3,7 +3,27 @@
 Commands to run each service. Run them from the directory named in the heading.
 Each Python service has its own virtual environment; `uv` creates it on `uv sync`.
 
-Start the databases and RabbitMQ before the processes that use them.
+## All services
+
+Directory: `services`
+
+`docker-compose.yml` builds the app, the parsing worker, the chatbot, and the frontend. It includes the compose files for app Postgres (`app/db/lunch`), RabbitMQ and vLLM (`parsing`), and chatbot Postgres (`chatbot`).
+
+Stop stacks already started from those directories first. They use the same container names.
+
+```powershell
+docker compose up --build
+```
+
+vLLM needs an NVIDIA GPU. The first start downloads the model and can take several minutes. Database, RabbitMQ, and provider URLs for containers come from `services/.env`. Each service `.env` keeps `localhost` for running that process on the host. The chatbot still reads `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` from `services/chatbot/.env`. Uploaded books stay in `services/app/storage`, shared by the app, the worker, and the chatbot.
+
+Stop everything:
+
+```powershell
+docker compose down
+```
+
+Start the databases and RabbitMQ before the processes that use them when you run a service on its own.
 
 | Service | Address |
 | --- | --- |
